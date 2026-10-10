@@ -11,4 +11,8 @@ interface ImportMetaEnv {
     readonly VITE_ANALYTICS_GA4_ID?: string;
     // Baidu Analytics site ID
     readonly VITE_ANALYTICS_BAIDU_ID?: string;
+    // Public Sub2API origin used for browser-side account verification.
+    readonly VITE_SUB2API_BASE_URL?: string;
+    // Public login page used when no valid Sub2API session is available.
+    readonly VITE_TOKENHUB_LOGIN_URL?: string;
 }

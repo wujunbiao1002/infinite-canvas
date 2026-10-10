@@ -343,6 +343,10 @@ export default {
         shortcuts: "快捷键",
         lightTheme: "切换到浅色主题",
         darkTheme: "切换到深色主题",
+        account: "账户",
+        login: "登录",
+        openAccount: "打开账户中心",
+        logout: "退出登录",
     },
     home: {
         promptError: "获取提示词失败",

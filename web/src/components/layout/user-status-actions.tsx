@@ -1,17 +1,19 @@
+import { Avatar, Dropdown, Tooltip, type MenuProps } from "antd";
 import type { CSSProperties } from "react";
-import { Tooltip } from "antd";
-import { BookOpen, Keyboard, Puzzle, Settings2 } from "lucide-react";
+import { BookOpen, Keyboard, LogIn, LogOut, Puzzle, Settings2, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { GitHubLink } from "@/components/layout/github-link";
 import { VersionReleaseModal } from "@/components/layout/version-release-modal";
-import { DOCS_URL } from "@/constant/env";
+import { DOCS_URL, TOKENHUB_LOGIN_URL } from "@/constant/env";
 import { changeAppLocale, type AppLocale } from "@/i18n";
+import { clearSub2ApiSession } from "@/lib/sub2api-session";
 import { cn } from "@/lib/utils";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { useConfigStore } from "@/stores/use-config-store";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { useUserStore } from "@/stores/use-user-store";
 
 type UserStatusActionsProps = {
     showConfig?: boolean;
@@ -25,6 +27,8 @@ export function UserStatusActions({ showConfig = true, variant = "default", onOp
     const theme = useThemeStore((state) => state.theme);
     const setTheme = useThemeStore((state) => state.setTheme);
     const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
+    const user = useUserStore((state) => state.user);
+    const clearSession = useUserStore((state) => state.clearSession);
     const canvasTheme = canvasThemes[theme];
     const naturalIconClass = "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-black/5 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white [&_svg]:size-4";
     const iconStyle: CSSProperties | undefined = variant === "canvas" ? { color: canvasTheme.node.text } : undefined;
@@ -34,6 +38,15 @@ export function UserStatusActions({ showConfig = true, variant = "default", onOp
     const locale = i18n.resolvedLanguage as AppLocale;
     const nextLocale = locale === "zh-CN" ? "en-US" : "zh-CN";
     const languageLabel = t("topNav.switchLanguage", { language: t(nextLocale === "zh-CN" ? "locale.zhCN" : "locale.enUS") });
+    const accountLabel = user?.username || user?.email || user?.id || t("topNav.login");
+    const accountItems: MenuProps["items"] = user
+        ? [
+              { key: "account", label: <div className="min-w-44"><div className="font-medium">{user.username || user.email || user.id}</div><div className="text-xs text-stone-500">{user.email || `ID: ${user.id}`}</div></div>, disabled: true },
+              { type: "divider" as const },
+              { key: "profile", icon: <UserRound className="size-4" />, label: <a href="https://tokenhub.junly.top/dashboard" target="_blank" rel="noopener noreferrer">{t("topNav.openAccount")}</a> },
+              { key: "logout", icon: <LogOut className="size-4" />, label: t("topNav.logout"), onClick: () => { clearSub2ApiSession(); clearSession(); window.location.replace(TOKENHUB_LOGIN_URL); } },
+          ]
+        : [];
 
     return (
         <div className="inline-flex shrink-0 items-center gap-1">
@@ -42,9 +55,9 @@ export function UserStatusActions({ showConfig = true, variant = "default", onOp
                     <Puzzle className="size-4" />
                 </button>
             ) : null}
-            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className={naturalIconClass} style={iconStyle} aria-label={t("topNav.docs")} title={t("topNav.docs")}>
+            {/* <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className={naturalIconClass} style={iconStyle} aria-label={t("topNav.docs")} title={t("topNav.docs")}>
                 <BookOpen className="size-4" />
-            </a>
+            </a> */}
             {showConfig ? (
                 <button type="button" className={naturalIconClass} style={iconStyle} onClick={() => openConfigDialog(false)} aria-label={t("navigation.config")} title={t("navigation.config")}>
                     <Settings2 className="size-4" />
@@ -56,13 +69,25 @@ export function UserStatusActions({ showConfig = true, variant = "default", onOp
                 </button>
             </Tooltip>
             <AnimatedThemeToggler theme={theme} onThemeChange={setTheme} className={naturalIconClass} style={iconStyle} aria-label={t(theme === "dark" ? "topNav.lightTheme" : "topNav.darkTheme")} title={t(theme === "dark" ? "topNav.lightTheme" : "topNav.darkTheme")} />
-            <VersionReleaseModal style={versionStyle} />
-            <GitHubLink className={cn("bg-transparent hover:bg-transparent dark:hover:bg-transparent", gitHubClassName)} style={gitHubStyle} />
+            {/* <VersionReleaseModal style={versionStyle} /> */}
+            {/* <GitHubLink className={cn("bg-transparent hover:bg-transparent dark:hover:bg-transparent", gitHubClassName)} style={gitHubStyle} /> */}
             {onOpenShortcuts ? (
                 <button type="button" className={naturalIconClass} style={iconStyle} onClick={onOpenShortcuts} aria-label={t("topNav.shortcuts")} title={t("topNav.shortcuts")}>
                     <Keyboard className="size-4" />
                 </button>
             ) : null}
+            {user ? (
+                <Dropdown menu={{ items: accountItems }} trigger={["click"]} placement="bottomRight">
+                    <button type="button" className="inline-flex max-w-36 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-stone-600 transition hover:bg-black/5 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white" aria-label={t("topNav.account")} title={user.email || user.username}>
+                        <Avatar size={24} src={user.avatarUrl || undefined} icon={<UserRound className="size-3.5" />} />
+                        <span className="hidden max-w-24 truncate sm:inline">{accountLabel}</span>
+                    </button>
+                </Dropdown>
+            ) : (
+                <a href={TOKENHUB_LOGIN_URL} className={naturalIconClass} style={iconStyle} aria-label={t("topNav.login")} title={t("topNav.login")}>
+                    <LogIn className="size-4" />
+                </a>
+            )}
         </div>
     );
 }

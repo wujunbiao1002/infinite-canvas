@@ -32,6 +32,18 @@ export async function importAppConfig(file: File) {
         throw new Error(i18n.t("config.invalidFile"));
     }
     if (data.app !== "infinite-canvas" || data.version !== 1 || !data.config || !data.webdav || !data.promptSources) throw new Error(i18n.t("config.invalidFile"));
-    useConfigStore.setState({ config: data.config, webdav: data.webdav });
+
+    // 只允许导入 tokenhub.junly.top 的渠道配置
+    const filteredChannels = data.config.channels.filter((channel) => channel.baseUrl.toLowerCase().includes("tokenhub.junly.top"));
+    if (filteredChannels.length === 0 && data.config.channels.length > 0) {
+        throw new Error("导入失败：只允许导入 tokenhub.junly.top 的渠道配置");
+    }
+
+    const filteredConfig = {
+        ...data.config,
+        channels: filteredChannels,
+    };
+
+    useConfigStore.setState({ config: filteredConfig, webdav: data.webdav });
     usePromptSourceStore.setState(data.promptSources);
 }

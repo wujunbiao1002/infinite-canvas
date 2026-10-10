@@ -1,9 +1,12 @@
-import { Button, Drawer, Input, Segmented, Select, Space } from "antd";
-import { ListPlus, Trash2 } from "lucide-react";
+import { Button, Drawer, Input, message, Segmented, Select, Space, Spin } from "antd";
+import { ListPlus, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { SUB2API_BASE_URL } from "@/constant/env";
+import { getSub2ApiKeys, type Sub2ApiKey } from "@/services/api/sub2api";
 import { defaultBaseUrlForApiFormat, guessCapability, normalizeChannelModels, type ApiCallFormat, type ChannelModel, type ModelCapability, type ModelChannel } from "@/stores/use-config-store";
+import { useUserStore } from "@/stores/use-user-store";
 import { ModelScriptEditor } from "./model-script-editor";
 import { ModelSelectModal } from "./model-select-modal";
 
@@ -11,18 +14,50 @@ type ScriptTarget = { name: string; capability: ModelCapability; value: string }
 
 export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: boolean; channel: ModelChannel | null; onSave: (channel: ModelChannel) => void; onClose: () => void }) {
     const { t } = useTranslation();
+    const { session } = useUserStore();
     const [draft, setDraft] = useState<ModelChannel | null>(channel);
     const [selectOpen, setSelectOpen] = useState(false);
     const [scriptTarget, setScriptTarget] = useState<ScriptTarget | null>(null);
+    const [apiKeys, setApiKeys] = useState<Sub2ApiKey[]>([]);
+    const [loadingKeys, setLoadingKeys] = useState(false);
+
     const apiFormatOptions: Array<{ label: string; value: ApiCallFormat }> = [
         { label: "OpenAI", value: "openai" },
         { label: "Gemini", value: "gemini" },
     ];
     const capabilityOptions: Array<{ label: string; value: ModelCapability }> = ["image", "video", "text", "audio"].map((value) => ({ label: t(`config.channelEditor.capabilities.${value}`), value: value as ModelCapability }));
 
+    // 获取 API Key 列表
+    const fetchApiKeys = async () => {
+        if (!session?.token) {
+            message.warning("请先登录 Sub2API");
+            return;
+        }
+
+        setLoadingKeys(true);
+        try {
+            const keys = await getSub2ApiKeys(SUB2API_BASE_URL, session.token);
+            setApiKeys(keys);
+            if (keys.length === 0) {
+                message.info("未找到可用的 API Key");
+            }
+        } catch (error) {
+            console.error("Failed to fetch API keys:", error);
+            message.error("获取 API Key 列表失败");
+        } finally {
+            setLoadingKeys(false);
+        }
+    };
+
     useEffect(() => {
-        if (open && channel) setDraft(channel);
-    }, [open, channel]);
+        if (open && channel) {
+            setDraft(channel);
+            // 如果是 tokenhub 且已登录,自动加载 API Key 列表
+            if (session?.token && channel.baseUrl.toLowerCase().includes("tokenhub.junly.top")) {
+                fetchApiKeys();
+            }
+        }
+    }, [open, channel, session?.token]);
 
     if (!draft) return null;
 
@@ -33,6 +68,9 @@ export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: 
         const baseUrl = !draft.baseUrl.trim() || draft.baseUrl.trim() === defaultBaseUrlForApiFormat(draft.apiFormat) ? defaultBaseUrlForApiFormat(apiFormat) : draft.baseUrl;
         patch({ apiFormat, baseUrl });
     };
+
+    const isTokenhubChannel = draft.baseUrl.toLowerCase().includes("tokenhub.junly.top");
+    const canEditBaseUrl = !isTokenhubChannel;
 
     const applySelection = (names: string[]) => {
         const map = new Map(draft.models.map((model) => [model.name, model]));
@@ -75,11 +113,35 @@ export function ChannelEditorDrawer({ open, channel, onSave, onClose }: { open: 
                 </label>
                 <label className="block md:col-span-2">
                     <span className="mb-1 block text-sm font-medium">{t("config.channelEditor.baseUrl")}</span>
-                    <Input value={draft.baseUrl} onChange={(event) => patch({ baseUrl: event.target.value })} placeholder="https://api.example.com" />
+                    <Input value={draft.baseUrl} onChange={(event) => patch({ baseUrl: event.target.value })} placeholder="https://api.example.com" disabled={isTokenhubChannel} />
+                    {isTokenhubChannel && <div className="mt-1 text-xs text-stone-500">Tokenhub 渠道的接口地址固定为 {SUB2API_BASE_URL}</div>}
                 </label>
                 <label className="block md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium">API Key</span>
-                    <Input.Password value={draft.apiKey} onChange={(event) => patch({ apiKey: event.target.value })} placeholder="sk-..." />
+                    <div className="mb-1 flex items-center justify-between">
+                        <span className="text-sm font-medium">API Key</span>
+                        {isTokenhubChannel && session?.token && (
+                            <Button size="small" type="link" icon={<RefreshCw className="size-3.5" />} loading={loadingKeys} onClick={fetchApiKeys}>
+                                刷新列表
+                            </Button>
+                        )}
+                    </div>
+                    {isTokenhubChannel && session?.token ? (
+                        <Select
+                            className="w-full"
+                            placeholder="选择 API Key"
+                            value={draft.apiKey || undefined}
+                            onChange={(value) => patch({ apiKey: value })}
+                            options={apiKeys.map((key) => ({
+                                label: `${key.name} (${key.key.slice(0, 8)}...${key.key.slice(-4)})`,
+                                value: key.key,
+                            }))}
+                            loading={loadingKeys}
+                            notFoundContent={loadingKeys ? <Spin size="small" /> : "无可用 API Key"}
+                        />
+                    ) : (
+                        <Input.Password value={draft.apiKey} onChange={(event) => patch({ apiKey: event.target.value })} placeholder="sk-..." />
+                    )}
+                    {isTokenhubChannel && !session?.token && <div className="mt-1 text-xs text-stone-500">登录 Sub2API 后可直接选择 API Key</div>}
                 </label>
             </div>
 

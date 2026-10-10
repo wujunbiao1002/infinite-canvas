@@ -9,6 +9,8 @@ data/
 .DS_Store
 .idea
 web/dist
+.claude/
+junly-docs/
 
 **/dist
 web/public/plugins

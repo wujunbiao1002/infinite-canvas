@@ -477,7 +477,14 @@ export function buildApiUrl(baseUrl: string, path: string) {
     const normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "");
     const lowerBaseUrl = normalizedBaseUrl.toLowerCase();
     const apiBaseUrl = lowerBaseUrl.endsWith("/v1") ? normalizedBaseUrl : `${normalizedBaseUrl}/v1`;
-    return withLocalProxy(`${apiBaseUrl}${path}`);
+    const fullUrl = `${apiBaseUrl}${path}`;
+
+    // 本地开发时，tokenhub.junly.top 的请求通过 Vite proxy
+    if (import.meta.env.DEV && lowerBaseUrl.includes("tokenhub.junly.top")) {
+        return fullUrl.replace(/^https?:\/\/tokenhub\.junly\.top/, "/sub2api-proxy");
+    }
+
+    return withLocalProxy(fullUrl);
 }
 
 export function normalizeLocalProxyUrl(value: string) {

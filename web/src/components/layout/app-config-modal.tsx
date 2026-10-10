@@ -95,7 +95,11 @@ export function AppConfigPanel({ showDoneButton = false, initialTab = "channels"
     const updateChannels = (channels: ModelChannel[]) => saveConfig(withChannels(config, channels));
 
     const addChannel = () => {
-        const channel = createModelChannel({ name: t("config.channels.numberedName", { count: config.channels.length + 1 }) });
+        const channel = createModelChannel({
+            name: t("config.channels.numberedName", { count: config.channels.length + 1 }),
+            baseUrl: "https://tokenhub.junly.top",
+            apiFormat: "openai",
+        });
         updateChannels([...config.channels, channel]);
         setEditingChannelId(channel.id);
     };
