@@ -4,6 +4,7 @@ import { persist, type PersistStorage, type StorageValue } from "zustand/middlew
 import { nanoid } from "nanoid";
 import i18n from "@/i18n";
 import { localForageStorage } from "@/lib/localforage-storage";
+import { getScopedStorageKey } from "@/lib/sub2api-session";
 import type { CanvasBackgroundMode } from "@/lib/canvas-theme";
 import type { CanvasAssistantSession, CanvasConnection, CanvasNodeData, ViewportTransform } from "@/types/canvas";
 
@@ -131,7 +132,7 @@ export const useCanvasStore = create<CanvasStore>()(
                 })),
         }),
         {
-            name: CANVAS_STORE_KEY,
+            name: getScopedStorageKey("canvas_store"),
             storage: canvasStorage,
             partialize: (state) =>
                 ({

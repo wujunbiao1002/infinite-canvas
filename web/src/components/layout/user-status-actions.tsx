@@ -8,7 +8,7 @@ import { GitHubLink } from "@/components/layout/github-link";
 import { VersionReleaseModal } from "@/components/layout/version-release-modal";
 import { DOCS_URL, TOKENHUB_LOGIN_URL } from "@/constant/env";
 import { changeAppLocale, type AppLocale } from "@/i18n";
-import { clearSub2ApiSession } from "@/lib/sub2api-session";
+import { clearSub2ApiSession, clearUserData } from "@/lib/sub2api-session";
 import { cn } from "@/lib/utils";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { useConfigStore } from "@/stores/use-config-store";
@@ -44,7 +44,7 @@ export function UserStatusActions({ showConfig = true, variant = "default", onOp
               { key: "account", label: <div className="min-w-44"><div className="font-medium">{user.username || user.email || user.id}</div><div className="text-xs text-stone-500">{user.email || `ID: ${user.id}`}</div></div>, disabled: true },
               { type: "divider" as const },
               { key: "profile", icon: <UserRound className="size-4" />, label: <a href="https://tokenhub.junly.top/dashboard" target="_blank" rel="noopener noreferrer">{t("topNav.openAccount")}</a> },
-              { key: "logout", icon: <LogOut className="size-4" />, label: t("topNav.logout"), onClick: () => { clearSub2ApiSession(); clearSession(); window.location.replace(TOKENHUB_LOGIN_URL); } },
+              { key: "logout", icon: <LogOut className="size-4" />, label: t("topNav.logout"), onClick: async () => { await clearUserData(); clearSub2ApiSession(); clearSession(); window.location.replace(TOKENHUB_LOGIN_URL); } },
           ]
         : [];
 
